@@ -21,24 +21,3 @@ func newHTTPSClient(_ map[string]string) *http.Client {
 		},
 	}
 }
-
-// newTailscaleClient returns an http.Client configured for Tailscale transport.
-// TODO: Integrate with tsnet or Tailscale local API for direct node dialing.
-func newTailscaleClient(_ map[string]string) *http.Client {
-	// Stub — falls back to standard HTTPS for now.
-	return newHTTPSClient(nil)
-}
-
-// newHeadscaleClient returns an http.Client configured for Headscale transport.
-// TODO: Integrate with Headscale API for node resolution and dialing.
-func newHeadscaleClient(_ map[string]string) *http.Client {
-	// Stub — falls back to standard HTTPS for now.
-	return newHTTPSClient(nil)
-}
-
-// newCloudflareClient returns an http.Client configured for Cloudflare Tunnel transport.
-// TODO: Integrate with cloudflared tunnel client for routed connections.
-func newCloudflareClient(_ map[string]string) *http.Client {
-	// Stub — falls back to standard HTTPS for now.
-	return newHTTPSClient(nil)
-}

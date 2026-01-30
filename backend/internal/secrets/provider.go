@@ -26,8 +26,7 @@ func NewProvider(cfg config.SecretsConfig) (Provider, error) {
 	case "builtin":
 		return NewBuiltinProvider(cfg.EncryptionKey)
 	case "vault":
-		// TODO: Implement HashiCorp Vault provider.
-		return nil, fmt.Errorf("vault secrets provider is not yet implemented")
+		return NewVaultProvider(cfg.VaultAddr, cfg.VaultToken, cfg.VaultMountPath)
 	default:
 		return nil, fmt.Errorf("unknown secrets provider: %s", cfg.Provider)
 	}

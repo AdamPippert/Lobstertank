@@ -46,8 +46,13 @@ func NewProvider(cfg config.AuthConfig, sp secrets.Provider) (Provider, error) {
 		}
 		return NewTokenProvider(cfg.TokenSecret), nil
 	case "oidc":
-		// TODO: Implement OIDC provider.
-		return nil, fmt.Errorf("OIDC auth provider is not yet implemented")
+		if cfg.OIDCIssuer == "" {
+			return nil, fmt.Errorf("LT_AUTH_OIDC_ISSUER is required when auth provider is 'oidc'")
+		}
+		if cfg.OIDCClientID == "" {
+			return nil, fmt.Errorf("LT_AUTH_OIDC_CLIENT_ID is required when auth provider is 'oidc'")
+		}
+		return NewOIDCProvider(context.Background(), cfg.OIDCIssuer, cfg.OIDCClientID, cfg.OIDCAudience)
 	default:
 		return nil, fmt.Errorf("unknown auth provider: %s", cfg.Provider)
 	}

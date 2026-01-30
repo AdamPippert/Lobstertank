@@ -1,0 +1,53 @@
+Lobstertank has been deployed successfully!
+
+{{- if .Values.ingress.enabled }}
+
+The application is accessible via Ingress:
+
+  URL: http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}
+
+  Frontend: http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/
+  Backend API: http{{ if .Values.ingress.tls }}s{{ end }}://{{ .Values.ingress.host }}/api/
+
+{{- else if .Values.route.enabled }}
+
+The application is accessible via OpenShift Route:
+
+  Run the following to get the route URL:
+
+    oc get route {{ include "lobstertank.fullname" . }} -o jsonpath='{.spec.host}'
+
+{{- else }}
+
+The application is running inside the cluster. To access it locally, use port-forward:
+
+  Frontend:
+    kubectl port-forward svc/{{ include "lobstertank.fullname" . }}-frontend {{ .Values.frontend.service.port }}:{{ .Values.frontend.service.port }}
+
+  Backend API:
+    kubectl port-forward svc/{{ include "lobstertank.fullname" . }}-backend {{ .Values.backend.service.port }}:{{ .Values.backend.service.port }}
+
+  Then open http://localhost:{{ .Values.frontend.service.port }} in your browser.
+
+{{- end }}
+
+Components:
+  - Backend (Go):   {{ .Values.backend.image.repository }}:{{ .Values.backend.image.tag }}
+  - Frontend (Nginx): {{ .Values.frontend.image.repository }}:{{ .Values.frontend.image.tag }}
+
+{{- if .Values.persistence.enabled }}
+
+Persistent storage is enabled ({{ .Values.persistence.size }}) for the SQLite database at /data.
+{{- else }}
+
+WARNING: Persistence is disabled. Data will be lost when the backend pod restarts.
+         Set persistence.enabled=true for production use.
+{{- end }}
+
+{{- if eq .Values.secrets.authTokenSecret "changeme" }}
+
+WARNING: You are using the default auth token secret.
+         Set secrets.authTokenSecret to a secure random value for production use:
+
+           helm upgrade {{ .Release.Name }} lobstertank --set secrets.authTokenSecret=$(openssl rand -hex 32)
+{{- end }}
