@@ -39,10 +39,11 @@ type AuthConfig struct {
 
 // SecretsConfig defines the secret management provider settings.
 type SecretsConfig struct {
-	Provider      string // "builtin" or "vault"
-	EncryptionKey string
-	VaultAddr     string
-	VaultToken    string
+	Provider       string // "builtin" or "vault"
+	EncryptionKey  string
+	VaultAddr      string
+	VaultToken     string
+	VaultMountPath string
 }
 
 // TransportConfig defines the network transport settings.
@@ -86,10 +87,11 @@ func Load() (*Config, error) {
 			OIDCAudience: os.Getenv("LT_AUTH_OIDC_AUDIENCE"),
 		},
 		Secrets: SecretsConfig{
-			Provider:      envOrDefault("LT_SECRETS_PROVIDER", "builtin"),
-			EncryptionKey: os.Getenv("LT_SECRETS_ENCRYPTION_KEY"),
-			VaultAddr:     os.Getenv("LT_SECRETS_VAULT_ADDR"),
-			VaultToken:    os.Getenv("LT_SECRETS_VAULT_TOKEN"),
+			Provider:       envOrDefault("LT_SECRETS_PROVIDER", "builtin"),
+			EncryptionKey:  os.Getenv("LT_SECRETS_ENCRYPTION_KEY"),
+			VaultAddr:      os.Getenv("LT_SECRETS_VAULT_ADDR"),
+			VaultToken:     os.Getenv("LT_SECRETS_VAULT_TOKEN"),
+			VaultMountPath: envOrDefault("LT_SECRETS_VAULT_MOUNT", "secret"),
 		},
 		Transport: TransportConfig{
 			Default: envOrDefault("LT_TRANSPORT_DEFAULT", "https"),

@@ -1,0 +1,13 @@
+apiVersion: v2
+name: lobstertank
+description: A Helm chart for the Lobstertank two-tier application (Go backend + React/Nginx frontend)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+keywords:
+  - lobstertank
+  - go
+  - react
+  - nginx
+maintainers:
+  - name: Lobstertank Team
