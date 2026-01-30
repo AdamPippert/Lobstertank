@@ -1,8 +1,11 @@
 package gateway
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"time"
 
@@ -86,13 +89,56 @@ func (c *Client) HealthCheck(ctx context.Context) (*model.HealthCheckResult, err
 	return result, nil
 }
 
+// openClawRequest is the request body for the OpenClaw completions endpoint.
+type openClawRequest struct {
+	Prompt   string            `json:"prompt"`
+	Stream   bool              `json:"stream"`
+	Metadata map[string]string `json:"metadata,omitempty"`
+}
+
+// openClawResponse is the response body from the OpenClaw completions endpoint.
+type openClawResponse struct {
+	ID       string `json:"id"`
+	Response string `json:"response"`
+	Model    string `json:"model,omitempty"`
+}
+
 // SendPrompt sends a prompt to the OpenClaw gateway and returns the raw response body.
-// This is a stub — the actual OpenClaw API contract will define the real implementation.
 func (c *Client) SendPrompt(ctx context.Context, prompt string) ([]byte, error) {
-	// TODO: Implement once OpenClaw API contract is defined.
-	_ = ctx
-	_ = prompt
-	return nil, fmt.Errorf("SendPrompt not yet implemented for gateway %s", c.gateway.ID)
+	body, err := json.Marshal(openClawRequest{
+		Prompt: prompt,
+		Stream: false,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("marshal prompt request: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.gateway.Endpoint+"/v1/completions", bytes.NewReader(body))
+	if err != nil {
+		return nil, fmt.Errorf("build prompt request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	if err := c.applyAuth(ctx, req); err != nil {
+		return nil, fmt.Errorf("apply auth: %w", err)
+	}
+
+	resp, err := c.httpClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("send prompt to gateway %s: %w", c.gateway.ID, err)
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 10<<20)) // 10 MiB limit
+	if err != nil {
+		return nil, fmt.Errorf("read response from gateway %s: %w", c.gateway.ID, err)
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("gateway %s returned HTTP %d: %s", c.gateway.ID, resp.StatusCode, string(respBody))
+	}
+
+	return respBody, nil
 }
 
 // applyAuth adds authentication headers or TLS config to the outbound request.
@@ -107,7 +153,11 @@ func (c *Client) applyAuth(ctx context.Context, req *http.Request) error {
 	case "mtls":
 		// mTLS is handled at the transport/TLS layer; no header needed.
 	case "oidc":
-		// TODO: Implement OIDC token acquisition.
+		token, err := c.resolveSecret(ctx, c.gateway.Auth.SecretRef)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Authorization", "Bearer "+token)
 	default:
 		// No auth configured.
 	}
