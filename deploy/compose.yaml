@@ -1,0 +1,49 @@
+# Lobstertank — podman-compose / docker-compose configuration
+# Usage:
+#   podman-compose up -d
+#   podman-compose down
+
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Containerfile.backend
+    image: lobstertank-backend:dev
+    container_name: lobstertank-backend
+    ports:
+      - "8080:8080"
+    environment:
+      LT_SERVER_HOST: "0.0.0.0"
+      LT_SERVER_PORT: "8080"
+      LT_DB_DRIVER: "sqlite"
+      LT_DB_DSN: "/data/lobstertank.db"
+      LT_AUTH_PROVIDER: "token"
+      LT_AUTH_TOKEN_SECRET: "${LT_AUTH_TOKEN_SECRET:-changeme}"
+      LT_SECRETS_PROVIDER: "builtin"
+      LT_AUDIT_ENABLED: "true"
+      LT_AUDIT_OUTPUT: "stdout"
+    volumes:
+      - lobstertank-data:/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: deploy/Containerfile.frontend
+    image: lobstertank-frontend:dev
+    container_name: lobstertank-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  lobstertank-data:

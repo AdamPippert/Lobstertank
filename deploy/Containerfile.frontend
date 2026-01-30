@@ -1,0 +1,30 @@
+# Lobstertank Frontend — multi-stage OCI build
+# Compatible with Podman and Docker.
+
+# ── Build stage ──────────────────────────────
+FROM docker.io/library/node:20-bookworm-slim AS build
+
+WORKDIR /app
+
+COPY frontend/package.json frontend/package-lock.json* ./
+RUN npm ci
+
+COPY frontend/ .
+RUN npm run build
+
+# ── Runtime stage ────────────────────────────
+FROM docker.io/library/nginx:1.27-bookworm
+
+# Remove default nginx config.
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Add our SPA-friendly nginx config.
+COPY deploy/nginx.conf /etc/nginx/conf.d/lobstertank.conf
+
+# Copy built assets.
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 3000
+
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:3000/ || exit 1
