@@ -1,0 +1,387 @@
+openapi: 3.1.0
+info:
+  title: Lobstertank API
+  description: Control plane for managing multiple OpenClaw gateways.
+  version: 0.1.0
+  contact:
+    name: Adam Pippert
+  license:
+    name: Proprietary
+
+servers:
+  - url: http://localhost:8080
+    description: Local development
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      summary: Server health check
+      tags: [System]
+      responses:
+        '200':
+          description: Server is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+
+  /api/v1/gateways:
+    get:
+      operationId: listGateways
+      summary: List all registered gateways
+      tags: [Gateways]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: List of gateways
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Gateway'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+    post:
+      operationId: createGateway
+      summary: Register a new gateway
+      tags: [Gateways]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGatewayRequest'
+      responses:
+        '201':
+          description: Gateway created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gateway'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  /api/v1/gateways/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+
+    get:
+      operationId: getGateway
+      summary: Get a gateway by ID
+      tags: [Gateways]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Gateway details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gateway'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    put:
+      operationId: updateGateway
+      summary: Update a gateway
+      tags: [Gateways]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGatewayRequest'
+      responses:
+        '200':
+          description: Gateway updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Gateway'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+    delete:
+      operationId: deleteGateway
+      summary: Deregister a gateway
+      tags: [Gateways]
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Gateway deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/gateways/{id}/health:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    post:
+      operationId: healthCheckGateway
+      summary: Run a health check against a gateway
+      tags: [Gateways]
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Health check result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HealthCheckResult'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/meta/fanout:
+    post:
+      operationId: metaFanOut
+      summary: Fan out a prompt to multiple gateways
+      tags: [Meta-Agent]
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FanOutRequest'
+      responses:
+        '200':
+          description: Aggregated responses
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FanOutResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+
+  schemas:
+    Gateway:
+      type: object
+      required: [id, name, endpoint, transport, auth, status, enrolled_at]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        endpoint:
+          type: string
+          format: uri
+        transport:
+          $ref: '#/components/schemas/TransportConfig'
+        auth:
+          $ref: '#/components/schemas/GatewayAuthConfig'
+        status:
+          type: string
+          enum: [online, offline, degraded, unknown]
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        enrolled_at:
+          type: string
+          format: date-time
+        last_seen_at:
+          type: string
+          format: date-time
+          nullable: true
+        ttl_seconds:
+          type: integer
+          nullable: true
+
+    TransportConfig:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [https, tailscale, headscale, cloudflare]
+        params:
+          type: object
+          additionalProperties:
+            type: string
+
+    GatewayAuthConfig:
+      type: object
+      required: [type]
+      properties:
+        type:
+          type: string
+          enum: [token, mtls, oidc]
+        params:
+          type: object
+          additionalProperties:
+            type: string
+        secret_ref:
+          type: string
+
+    CreateGatewayRequest:
+      type: object
+      required: [name, endpoint, transport, auth]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        endpoint:
+          type: string
+          format: uri
+        transport:
+          $ref: '#/components/schemas/TransportConfig'
+        auth:
+          $ref: '#/components/schemas/GatewayAuthConfig'
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        ttl_seconds:
+          type: integer
+
+    UpdateGatewayRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        endpoint:
+          type: string
+          format: uri
+        transport:
+          $ref: '#/components/schemas/TransportConfig'
+        auth:
+          $ref: '#/components/schemas/GatewayAuthConfig'
+        labels:
+          type: object
+          additionalProperties:
+            type: string
+        ttl_seconds:
+          type: integer
+
+    HealthCheckResult:
+      type: object
+      required: [gateway_id, status, checked_at]
+      properties:
+        gateway_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [online, offline, degraded, unknown]
+        latency:
+          type: string
+        error:
+          type: string
+        checked_at:
+          type: string
+          format: date-time
+
+    FanOutRequest:
+      type: object
+      required: [prompt]
+      properties:
+        gateway_ids:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Gateway IDs to target. Empty means all gateways.
+        prompt:
+          type: string
+
+    FanOutResponse:
+      type: object
+      required: [results]
+      properties:
+        results:
+          type: array
+          items:
+            $ref: '#/components/schemas/GatewayResult'
+
+    GatewayResult:
+      type: object
+      required: [gateway_id, gateway_name]
+      properties:
+        gateway_id:
+          type: string
+          format: uuid
+        gateway_name:
+          type: string
+        response:
+          type: string
+        error:
+          type: string
+
+    ApiError:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    Unauthorized:
+      description: Authentication required
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ApiError'
