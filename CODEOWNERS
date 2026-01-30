@@ -1,0 +1,20 @@
+# Lobstertank Code Owners
+# Each line is a file pattern followed by one or more owners.
+
+# Default owner for everything
+*                       @AdamPippert
+
+# Backend
+/backend/               @AdamPippert
+/backend/internal/auth/ @AdamPippert
+/backend/internal/secrets/ @AdamPippert
+
+# Frontend
+/frontend/              @AdamPippert
+
+# Deployment and infrastructure
+/deploy/                @AdamPippert
+/.github/               @AdamPippert
+
+# Documentation
+/docs/                  @AdamPippert
