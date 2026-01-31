@@ -9,6 +9,7 @@ import (
 
 	"github.com/AdamPippert/Lobstertank/internal/audit"
 	"github.com/AdamPippert/Lobstertank/internal/auth"
+	"github.com/AdamPippert/Lobstertank/internal/cli"
 	"github.com/AdamPippert/Lobstertank/internal/config"
 	"github.com/AdamPippert/Lobstertank/internal/gateway"
 	"github.com/AdamPippert/Lobstertank/internal/metaagent"
@@ -19,6 +20,12 @@ import (
 )
 
 func main() {
+	// Dispatch CLI subcommands. If the command is "serve" (or no args),
+	// cli.Run returns -1 and we fall through to the server boot below.
+	if code := cli.Run(os.Args); code >= 0 {
+		os.Exit(code)
+	}
+
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
 		Level: slog.LevelInfo,
 	}))

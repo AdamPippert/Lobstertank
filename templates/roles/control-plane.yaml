@@ -1,0 +1,67 @@
+apiVersion: lobstertank.io/v1alpha1
+kind: RoleOverlay
+metadata:
+  name: control-plane
+  description: >
+    Control-plane role — orchestration, UI/API, and management.
+    Higher resource allocation, persistent storage for state,
+    and tighter policy controls.
+  labels:
+    role: control-plane
+spec:
+  identity:
+    role: control-plane
+    labels:
+      role: control-plane
+      tier: management
+
+  runtime:
+    resources:
+      cpu: "1000m"
+      memory: 1Gi
+      storage_paths:
+        - openclaw-data:/data
+        - openclaw-state:/var/lib/openclaw
+
+  network:
+    ports:
+      - name: api
+        port: 8080
+        host_port: 8080
+        protocol: tcp
+      - name: grpc
+        port: 9090
+        protocol: tcp
+    ports_merge_strategy: replace
+
+  secrets:
+    entries:
+      - name: api-key
+        type: api_key
+        ref: "builtin://openclaw/api-key"
+      - name: db-cred
+        type: db_cred
+        ref: "builtin://openclaw/db-cred"
+    entries_merge_strategy: union
+
+  observability:
+    logging:
+      level: info
+    metrics:
+      enabled: true
+    traces:
+      enabled: true
+      endpoint: "http://localhost:4317"
+      format: otlp
+    health_check:
+      path: /healthz
+      interval: 20s
+      timeout: 5s
+      readiness_gate: true
+
+  policy:
+    approved_plugins: []
+    approved_providers:
+      - builtin
+      - vault
+      - k8s_secrets

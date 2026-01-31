@@ -1,0 +1,49 @@
+apiVersion: lobstertank.io/v1alpha1
+kind: EnvironmentOverlay
+metadata:
+  name: sandbox
+  description: >
+    Sandbox environment for local development and testing.
+    Minimal resources, no TLS, relaxed policy, debug logging.
+  labels:
+    env: sandbox
+    platform: local
+spec:
+  runtime:
+    deployment_target: sandbox
+    resources:
+      cpu: "250m"
+      memory: 128Mi
+
+  network:
+    bind_address: "127.0.0.1"
+
+  secrets:
+    provider: builtin
+
+  observability:
+    logging:
+      level: debug
+      format: text
+      destinations:
+        - stdout
+    metrics:
+      enabled: false
+    traces:
+      enabled: false
+    health_check:
+      interval: 60s
+      timeout: 10s
+
+  policy:
+    update_channel: nightly
+    filesystem_allowlist:
+      - /data
+      - /etc/openclaw
+      - /tmp
+      - /home
+    command_allowlist:
+      - /usr/bin/git
+      - /usr/bin/curl
+      - /usr/bin/jq
+      - /usr/bin/python3

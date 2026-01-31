@@ -1,0 +1,60 @@
+apiVersion: lobstertank.io/v1alpha1
+kind: RoleOverlay
+metadata:
+  name: worker
+  description: >
+    Worker / agent host role — executes workflows and tools.
+    Moderate resources, broader filesystem and command allowlists
+    for agentic workloads.
+  labels:
+    role: worker
+spec:
+  identity:
+    role: worker
+    labels:
+      role: worker
+      tier: compute
+
+  runtime:
+    resources:
+      cpu: "2000m"
+      memory: 2Gi
+
+  network:
+    ports:
+      - name: http
+        port: 8080
+        protocol: tcp
+    ports_merge_strategy: replace
+
+  secrets:
+    entries:
+      - name: api-key
+        type: api_key
+        ref: "builtin://openclaw/api-key"
+      - name: node-key
+        type: node_key
+        ref: "builtin://openclaw/node-key"
+    entries_merge_strategy: union
+
+  observability:
+    logging:
+      level: info
+    metrics:
+      enabled: true
+    health_check:
+      path: /healthz
+      interval: 30s
+      timeout: 5s
+
+  policy:
+    approved_plugins: []
+    filesystem_allowlist:
+      - /data
+      - /etc/openclaw
+      - /tmp
+      - /var/run/openclaw
+    command_allowlist:
+      - /usr/bin/git
+      - /usr/bin/curl
+      - /usr/bin/jq

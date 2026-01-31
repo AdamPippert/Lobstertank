@@ -1,0 +1,32 @@
+apiVersion: lobstertank.io/v1alpha1
+kind: EnvironmentOverlay
+metadata:
+  name: podman-fedora
+  description: >
+    Environment overlay for Podman on Fedora bare metal.
+    Sets deployment target, adjusts storage paths for Fedora layout,
+    and configures systemd-compatible logging.
+  labels:
+    env: podman-fedora
+    platform: fedora
+spec:
+  runtime:
+    deployment_target: podman
+    resources:
+      storage_paths:
+        - openclaw-data:/data
+    image:
+      pull_policy: IfNotPresent
+
+  network:
+    bind_address: "0.0.0.0"
+
+  observability:
+    logging:
+      destinations:
+        - stdout
+        - journald
+      format: json
+
+  policy:
+    update_channel: stable

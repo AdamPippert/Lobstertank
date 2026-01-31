@@ -1,0 +1,382 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://lobstertank.io/schemas/encoding-template/v1alpha1",
+  "title": "Lobstertank Encoding Template",
+  "description": "Schema for OpenClaw encoding templates, role overlays, environment overlays, and instance variables.",
+  "type": "object",
+  "required": ["apiVersion", "kind", "metadata", "spec"],
+  "properties": {
+    "apiVersion": {
+      "type": "string",
+      "const": "lobstertank.io/v1alpha1"
+    },
+    "kind": {
+      "type": "string",
+      "enum": ["EncodingTemplate", "RoleOverlay", "EnvironmentOverlay", "InstanceVars"]
+    },
+    "metadata": { "$ref": "#/$defs/Metadata" },
+    "spec": { "$ref": "#/$defs/Spec" }
+  },
+  "$defs": {
+    "Metadata": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^[a-z0-9][a-z0-9._-]*$",
+          "description": "Unique template name (DNS-label-safe)"
+        },
+        "version": {
+          "type": "string",
+          "pattern": "^\\d+\\.\\d+\\.\\d+(-[a-zA-Z0-9.]+)?$",
+          "description": "Semantic version"
+        },
+        "description": {
+          "type": "string"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "Spec": {
+      "type": "object",
+      "properties": {
+        "identity": { "$ref": "#/$defs/IdentitySpec" },
+        "runtime": { "$ref": "#/$defs/RuntimeSpec" },
+        "network": { "$ref": "#/$defs/NetworkSpec" },
+        "secrets": { "$ref": "#/$defs/SecretsSpec" },
+        "observability": { "$ref": "#/$defs/ObservabilitySpec" },
+        "policy": { "$ref": "#/$defs/PolicySpec" }
+      },
+      "additionalProperties": false
+    },
+    "IdentitySpec": {
+      "type": "object",
+      "properties": {
+        "instance_name": {
+          "type": "string",
+          "description": "Unique instance identifier"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["gateway", "control-plane", "worker", "observability", "db-adjunct"],
+          "description": "Functional role of this instance"
+        },
+        "region": {
+          "type": "string",
+          "description": "Deployment region/zone"
+        },
+        "labels": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        },
+        "tailnet_tags": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Tailscale/headscale tags for ACL mapping"
+        }
+      },
+      "additionalProperties": false
+    },
+    "RuntimeSpec": {
+      "type": "object",
+      "properties": {
+        "deployment_target": {
+          "type": "string",
+          "enum": ["podman", "kubernetes", "openshift", "droplet", "sandbox"],
+          "description": "Target platform for deployment artifacts"
+        },
+        "resources": { "$ref": "#/$defs/ResourceSpec" },
+        "image": { "$ref": "#/$defs/ImageSpec" }
+      },
+      "additionalProperties": false
+    },
+    "ResourceSpec": {
+      "type": "object",
+      "properties": {
+        "cpu": {
+          "type": "string",
+          "description": "CPU request/limit (Kubernetes quantity, e.g. 500m, 2)"
+        },
+        "memory": {
+          "type": "string",
+          "description": "Memory request/limit (e.g. 256Mi, 1Gi)"
+        },
+        "storage_paths": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Volume mount specifications"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ImageSpec": {
+      "type": "object",
+      "properties": {
+        "repository": {
+          "type": "string",
+          "description": "Container image repository"
+        },
+        "tag": {
+          "type": "string",
+          "description": "Image tag"
+        },
+        "pull_policy": {
+          "type": "string",
+          "enum": ["Always", "IfNotPresent", "Never"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "NetworkSpec": {
+      "type": "object",
+      "properties": {
+        "ports": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PortSpec" }
+        },
+        "bind_address": {
+          "type": "string",
+          "format": "ipv4",
+          "description": "IP address to bind to"
+        },
+        "reverse_proxy": { "$ref": "#/$defs/ReverseProxySpec" },
+        "tailscale": { "$ref": "#/$defs/TailscaleSpec" },
+        "multi_gateway": { "$ref": "#/$defs/MultiGatewaySpec" },
+        "ports_merge_strategy": {
+          "type": "string",
+          "enum": ["replace", "append", "union"],
+          "default": "replace"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PortSpec": {
+      "type": "object",
+      "required": ["name", "port"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "host_port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "protocol": {
+          "type": "string",
+          "enum": ["tcp", "udp", "TCP", "UDP"],
+          "default": "tcp"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ReverseProxySpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "provider": {
+          "type": "string",
+          "enum": ["nginx", "caddy", "traefik"]
+        },
+        "tls": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "TailscaleSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "provider": {
+          "type": "string",
+          "enum": ["tailscale", "headscale"]
+        },
+        "tags": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "acl_mapping": {
+          "type": "object",
+          "additionalProperties": { "type": "string" }
+        }
+      },
+      "additionalProperties": false
+    },
+    "MultiGatewaySpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "mode": {
+          "type": "string",
+          "enum": ["active-standby", "priority"]
+        },
+        "priority": {
+          "type": "integer",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": false
+    },
+    "SecretsSpec": {
+      "type": "object",
+      "properties": {
+        "provider": {
+          "type": "string",
+          "enum": ["builtin", "vault", "k8s_secrets"]
+        },
+        "entries": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/SecretEntry" }
+        },
+        "entries_merge_strategy": {
+          "type": "string",
+          "enum": ["replace", "append", "union"],
+          "default": "replace"
+        }
+      },
+      "additionalProperties": false
+    },
+    "SecretEntry": {
+      "type": "object",
+      "required": ["name", "type", "ref"],
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "type": {
+          "type": "string",
+          "enum": ["api_key", "node_key", "oauth_cred", "db_cred", "cert"]
+        },
+        "ref": {
+          "type": "string",
+          "minLength": 1,
+          "description": "URI referencing a secret provider entry (never a plaintext value)"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ObservabilitySpec": {
+      "type": "object",
+      "properties": {
+        "logging": { "$ref": "#/$defs/LoggingSpec" },
+        "metrics": { "$ref": "#/$defs/MetricsSpec" },
+        "traces": { "$ref": "#/$defs/TracesSpec" },
+        "health_check": { "$ref": "#/$defs/HealthCheckSpec" }
+      },
+      "additionalProperties": false
+    },
+    "LoggingSpec": {
+      "type": "object",
+      "properties": {
+        "destinations": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "redaction_rules": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Regex patterns for redacting sensitive data from logs"
+        },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"]
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json", "text"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "MetricsSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "endpoint": { "type": "string" },
+        "format": {
+          "type": "string",
+          "enum": ["prometheus", "otlp"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "TracesSpec": {
+      "type": "object",
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "endpoint": { "type": "string" },
+        "format": {
+          "type": "string",
+          "enum": ["otlp", "zipkin"]
+        }
+      },
+      "additionalProperties": false
+    },
+    "HealthCheckSpec": {
+      "type": "object",
+      "properties": {
+        "path": {
+          "type": "string",
+          "description": "HTTP path for health checks"
+        },
+        "interval": {
+          "type": "string",
+          "description": "Check interval (e.g. 30s, 1m)"
+        },
+        "timeout": {
+          "type": "string",
+          "description": "Check timeout (e.g. 5s)"
+        },
+        "readiness_gate": {
+          "type": "boolean",
+          "description": "If true, block traffic until health check passes"
+        }
+      },
+      "additionalProperties": false
+    },
+    "PolicySpec": {
+      "type": "object",
+      "properties": {
+        "update_channel": {
+          "type": "string",
+          "enum": ["stable", "beta", "nightly", "pinned"]
+        },
+        "pinned_version": {
+          "type": "string",
+          "description": "Exact version to pin to (only when update_channel is 'pinned')"
+        },
+        "approved_plugins": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "approved_providers": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "filesystem_allowlist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Paths the instance is allowed to access"
+        },
+        "command_allowlist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Commands the instance is allowed to execute"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

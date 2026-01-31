@@ -1,0 +1,35 @@
+apiVersion: lobstertank.io/v1alpha1
+kind: EnvironmentOverlay
+metadata:
+  name: kubernetes
+  description: >
+    Environment overlay for Kubernetes (vanilla or managed).
+    Sets deployment target to kubernetes, adjusts resource model,
+    and enables k8s-native secrets and observability.
+  labels:
+    env: kubernetes
+    platform: k8s
+spec:
+  runtime:
+    deployment_target: kubernetes
+    image:
+      pull_policy: IfNotPresent
+
+  secrets:
+    provider: k8s_secrets
+
+  observability:
+    logging:
+      destinations:
+        - stdout
+      format: json
+    traces:
+      enabled: true
+      endpoint: "http://otel-collector.monitoring:4317"
+      format: otlp
+
+  policy:
+    approved_providers:
+      - builtin
+      - vault
+      - k8s_secrets

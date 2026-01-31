@@ -1,0 +1,64 @@
+apiVersion: lobstertank.io/v1alpha1
+kind: RoleOverlay
+metadata:
+  name: gateway
+  description: >
+    Gateway role — ingress, relay, and auth edge.
+    Exposes HTTPS (443) and HTTP (8080), enables reverse proxy,
+    and configures multi-gateway active/standby topology.
+  labels:
+    role: gateway
+spec:
+  identity:
+    role: gateway
+    labels:
+      role: gateway
+      tier: edge
+
+  runtime:
+    resources:
+      cpu: "1000m"
+      memory: 512Mi
+
+  network:
+    ports:
+      - name: https
+        port: 443
+        host_port: 443
+        protocol: tcp
+      - name: http
+        port: 8080
+        host_port: 8080
+        protocol: tcp
+    ports_merge_strategy: replace
+    reverse_proxy:
+      enabled: true
+      provider: nginx
+      tls: true
+    multi_gateway:
+      enabled: true
+      mode: active-standby
+      priority: 100
+
+  secrets:
+    entries:
+      - name: tls-cert
+        type: cert
+        ref: "builtin://openclaw/tls-cert"
+      - name: api-key
+        type: api_key
+        ref: "builtin://openclaw/api-key"
+    entries_merge_strategy: union
+
+  observability:
+    logging:
+      level: info
+    metrics:
+      enabled: true
+    health_check:
+      path: /healthz
+      interval: 15s
+      timeout: 3s
+
+  policy:
+    approved_plugins: []

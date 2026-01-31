@@ -1,0 +1,83 @@
+apiVersion: lobstertank.io/v1alpha1
+kind: EncodingTemplate
+metadata:
+  name: adam-defaults
+  version: "0.1.0"
+  description: >
+    Personal opinionated defaults for all OpenClaw installs.
+    Covers auth, logging, observability, policy, and network baselines.
+  labels:
+    owner: adam
+    managed-by: lobstertank
+spec:
+  identity:
+    role: worker
+    region: us-east-1
+    labels:
+      tier: production
+      managed-by: lobstertank
+
+  runtime:
+    deployment_target: podman
+    resources:
+      cpu: "500m"
+      memory: 256Mi
+      storage_paths:
+        - openclaw-data:/data
+    image:
+      repository: ghcr.io/openclaw/openclaw
+      tag: stable
+      pull_policy: IfNotPresent
+
+  network:
+    bind_address: "0.0.0.0"
+    ports:
+      - name: http
+        port: 8080
+        protocol: tcp
+    tailscale:
+      enabled: false
+      provider: tailscale
+    multi_gateway:
+      enabled: false
+
+  secrets:
+    provider: builtin
+    entries:
+      - name: api-key
+        type: api_key
+        ref: "builtin://openclaw/api-key"
+    entries_merge_strategy: union
+
+  observability:
+    logging:
+      level: info
+      format: json
+      destinations:
+        - stdout
+      redaction_rules:
+        - "(?i)bearer\\s+[a-zA-Z0-9._-]+"
+        - "(?i)api[_-]?key[\"']?\\s*[:=]\\s*[\"']?[a-zA-Z0-9._-]+"
+    metrics:
+      enabled: true
+      endpoint: "http://localhost:9090/api/v1/write"
+      format: prometheus
+    traces:
+      enabled: false
+    health_check:
+      path: /healthz
+      interval: 30s
+      timeout: 5s
+      readiness_gate: true
+
+  policy:
+    update_channel: stable
+    approved_plugins: []
+    approved_providers:
+      - builtin
+      - vault
+    filesystem_allowlist:
+      - /data
+      - /etc/openclaw
+      - /tmp
+    command_allowlist: []
