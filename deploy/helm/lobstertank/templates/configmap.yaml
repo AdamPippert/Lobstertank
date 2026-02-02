@@ -12,3 +12,7 @@ data:
   LT_TRANSPORT_DEFAULT: {{ .Values.config.transportDefault | quote }}
   LT_AUDIT_ENABLED: {{ .Values.config.auditEnabled | quote }}
   LT_AUDIT_OUTPUT: {{ .Values.config.auditOutput | quote }}
+  {{- if eq .Values.config.secretsProvider "vault" }}
+  LT_SECRETS_VAULT_ADDR: {{ .Values.vault.addr | quote }}
+  LT_SECRETS_VAULT_MOUNT: {{ .Values.vault.mountPath | quote }}
+  {{- end }}
