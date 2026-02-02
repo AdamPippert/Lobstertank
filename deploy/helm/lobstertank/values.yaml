@@ -64,6 +64,17 @@ config:
   auditEnabled: "true"
   auditOutput: stdout
 
+# -- HashiCorp Vault configuration (used when secretsProvider=vault)
+vault:
+  enabled: false
+  addr: "https://vault.example.com"
+  mountPath: "secret"
+  # -- Vault token (stored in secret, or use existingSecret)
+  token: ""
+  # -- Use existing secret for Vault token instead of creating one
+  existingSecret: ""
+  existingSecretKey: "vault-token"
+
 # -- Sensitive values (mapped to LT_* environment variables)
 secrets:
   authTokenSecret: changeme

@@ -34,6 +34,14 @@ spec:
                 name: {{ include "lobstertank.fullname" . }}-config
             - secretRef:
                 name: {{ include "lobstertank.fullname" . }}-secret
+          {{- if and (eq .Values.config.secretsProvider "vault") .Values.vault.existingSecret }}
+          env:
+            - name: LT_SECRETS_VAULT_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.vault.existingSecret }}
+                  key: {{ .Values.vault.existingSecretKey }}
+          {{- end }}
           livenessProbe:
             httpGet:
               path: /healthz
