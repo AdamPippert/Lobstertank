@@ -64,7 +64,7 @@ func (s *SQLiteStore) ListGateways(ctx context.Context) ([]model.Gateway, error)
 	}
 	defer rows.Close()
 
-	var gateways []model.Gateway
+	gateways := make([]model.Gateway, 0)
 	for rows.Next() {
 		gw, err := scanGateway(rows)
 		if err != nil {

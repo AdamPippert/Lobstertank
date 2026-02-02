@@ -2,7 +2,7 @@
 # Compatible with Podman and Docker.
 
 # ── Build stage ──────────────────────────────
-FROM docker.io/library/golang:1.22-bookworm AS build
+FROM docker.io/library/golang:1.24-bookworm AS build
 
 WORKDIR /src
 
